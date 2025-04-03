@@ -1,0 +1,7 @@
+{
+    "name": "code-exec-node",
+    "version": "1.0.0",
+    "description": "Minimal Node.js setup for Heroku runtime",
+    "main": "index.js",
+    "dependencies": {}
+  }
