@@ -20,13 +20,13 @@ def run_command(cmd: List[str]) -> Dict[str, Any]:
             "stderr": "Error: Execution timed out"
         }
 
-def install_dependencies(packages: Optional[List[str]], pip_path: str = "pip") -> Dict[str, Any]:
+def install_dependencies(packages: Optional[List[str]], install_cmd_path: str = "npm") -> Dict[str, Any]:
     """
-    Installs pip packages using the specified pip executable.
+    Installs Node.js packages using the specified npm executable.
 
     Args:
-        packages: A list of package names to install.
-        pip_path: Path to the pip executable to use.
+        packages: A list of npm package names to install.
+        install_cmd_path: Path to the npm executable to use.
 
     Returns:
         The result of the package installation command, or a no-op result if no install is needed.
@@ -34,29 +34,30 @@ def install_dependencies(packages: Optional[List[str]], pip_path: str = "pip") -
     if not packages:
         return {"returncode": 0, "stdout": "", "stderr": ""}  # No installation needed
 
-    cmd = [pip_path, "install"] + packages
+    cmd = [install_cmd_path, "install"] + packages
     return run_command(cmd)
 
-def run_in_isolated_venv(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
+def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
     """
-    Runs Python code in a temporary isolated virtual environment.
+    Runs Node.js code in a temporary directory after installing optional npm packages.
+
+    Note that this does NOT mean the code is fully isolated or secure - it just means the npm installations
+    are isolated.
 
     Args:
         code: The code to run.
-        packages: Optional pip packages to install in the isolated venv.
+        packages: Optional npm packages to install before execution.
 
     Returns:
         Dictionary of returncode, stdout, and stderr.
     """
     temp_dir = tempfile.mkdtemp()
-    venv_path = os.path.join(temp_dir, "venv")
     try:
-        subprocess.run(["python3", "-m", "venv", venv_path], check=True)
+        # Initialize a package.json to avoid warnings from npm
+        with open(os.path.join(temp_dir, "package.json"), "w") as f:
+            f.write('{"type": "module"}')  # Enables top-level await if needed
 
-        pip = os.path.join(venv_path, "bin", "pip")
-        python = os.path.join(venv_path, "bin", "python")
-
-        install_result = install_dependencies(packages, pip_path=pip)
+        install_result = install_dependencies(packages, install_cmd_path="npm")
         if install_result["returncode"] != 0:
             return {
                 "returncode": install_result["returncode"],
@@ -64,20 +65,23 @@ def run_in_isolated_venv(code: str, packages: Optional[List[str]]) -> Dict[str, 
                 "stderr": f"Dependency install failed:\n{install_result['stderr']}"
             }
 
-        return run_command([python, "-c", code])
+        temp_path = os.path.join(temp_dir, "script.js")
+        with open(temp_path, "w") as f:
+            f.write(code)
+
+        return run_command(["node", temp_path], cwd=temp_dir)
 
     finally:
         shutil.rmtree(temp_dir)
 
-
-def code_exec_python(code: str, packages: Optional[List[str]] = None, isolated_venv: bool = False) -> Dict[str, Any]:
+def code_exec_node(code: str, packages: Optional[List[str]] = None, isolated_venv: bool = False) -> Dict[str, Any]:
     """
-    Executes a Python code snippet with optional pip dependencies.
+    Executes a Node.js code snippet with optional npm dependencies.
 
     Args:
-        code: The Python code to execute as a string.
-        packages: An optional list of pip package names to install before execution.
-        isolated_venv: Whether to use an isolated virtual environment for this run.
+        code: The Node.js code to execute as a string.
+        packages: An optional list of npm package names to install before execution.
+        isolated_venv: Whether to use a temporary directory for isolation.
             Not needed for STDIO mode; recommended but not required for SSE mode,
             to improve package isolation. Note that it will slow code execution down.
 
@@ -88,9 +92,10 @@ def code_exec_python(code: str, packages: Optional[List[str]] = None, isolated_v
             - 'stderr': Captured standard error or install failure messages.
     """
     if isolated_venv:
-        return run_in_isolated_venv(code, packages)
+        return run_in_tempdir(code, packages)
 
-    install_result = install_dependencies(packages)
+    # For non-isolated mode, install globally (or assume packages are already present)
+    install_result = install_dependencies(packages, install_cmd_path="npm")
     if install_result["returncode"] != 0:
         return {
             "returncode": install_result["returncode"],
@@ -98,4 +103,4 @@ def code_exec_python(code: str, packages: Optional[List[str]] = None, isolated_v
             "stderr": f"Dependency install failed:\n{install_result['stderr']}"
         }
 
-    return run_command(["python3", "-c", code])
+    return run_command(["node", "-e", code])
