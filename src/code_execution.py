@@ -4,10 +4,10 @@ import shutil
 import tempfile
 from typing import Optional, Dict, Any, List
 
-def run_command(cmd: List[str]) -> Dict[str, Any]:
+def run_command(cmd: List[str], cwd: Optional[str] = None) -> Dict[str, Any]:
     """Executes a command using subprocess and returns output and errors."""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=cwd)
         return {
             "returncode": result.returncode,
             "stdout": result.stdout.strip(),
@@ -19,6 +19,7 @@ def run_command(cmd: List[str]) -> Dict[str, Any]:
             "stdout": "",
             "stderr": "Error: Execution timed out"
         }
+
 
 def install_dependencies(packages: Optional[List[str]], install_cmd_path: str = "npm") -> Dict[str, Any]:
     """
