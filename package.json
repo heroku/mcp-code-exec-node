@@ -3,5 +3,7 @@
     "version": "1.0.0",
     "description": "Minimal Node.js setup for Heroku runtime",
     "main": "index.js",
-    "dependencies": {}
-  }
+    "dependencies": {
+        "is-number": "^7.0.0"
+    }
+}

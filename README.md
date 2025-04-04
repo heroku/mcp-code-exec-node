@@ -30,7 +30,7 @@ Instead of manually setting each variable, use the Heroku CLI to pull the correc
 export APP_NAME=<your-heroku-app-name>
 heroku create $APP_NAME
 
-heroku buildpacks:add --index 1 heroku/ruby
+heroku buildpacks:add --index 1 heroku/nodejs
 heroku buildpacks:add --index 2 heroku/python
 heroku config:set WEB_CONCURRENCY=1 -a $APP_NAME
 # set a private API key that you create, for example:
@@ -90,8 +90,8 @@ Example tool call request:
 python example_clients/test_sse.py mcp call_tool --args '{
   "name": "code_exec_node",
   "arguments": {
-    "code": "import numpy as np; print(np.random.rand(50).tolist())",
-    "packages": ["numpy"]
+    "code": "console.log(Array.from({length: 50}, () => Math.random()));",
+    "packages": []
   }
 }' | jq
 ```
@@ -110,8 +110,8 @@ Example tool call request:
 python example_clients/test_stdio.py mcp call_tool --args '{
   "name": "code_exec_node",
   "arguments": {
-    "code": "import numpy as np; print(np.random.rand(50).tolist())",
-    "packages": ["numpy"]
+    "code": "console.log(Array.from({length: 50}, () => Math.random()));",
+    "packages": []
   }
 }' | jq
 ```
@@ -126,9 +126,9 @@ Content-Length: 148
 Content-Length: 66
 
 {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
-Content-Length: 205
+Content-Length: 180
 
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"code_exec_node","arguments":{"code":"import numpy as np; print(np.random.rand(50).tolist())","packages":["numpy"]}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"code_exec_node","arguments":{"code":"console.log(Array.from({length: 50}, () => Math.random()));","packages":[""]}}}
 EOF
 ```
 *(Note that the server expects the client to send a shutdown request, so you can stop the connection with CTRL-C)*
@@ -152,15 +152,15 @@ heroku run --app $APP_NAME -- bash -c 'python -m example_clients.test_stdio mcp 
 ```
 or:
 ```bash
-heroku run --app $APP_NAME -- bash -c '
-python -m example_clients.test_stdio mcp call_tool --args '\''{
+heroku run --app "$APP_NAME" -- bash <<'EOF'
+python -m example_clients.test_stdio mcp call_tool --args '{
   "name": "code_exec_node",
   "arguments": {
-    "code": "import numpy as np; print(np.random.rand(50).tolist())",
-    "packages": ["numpy"]
+    "code": "const isNumber = require(\"is-number\"); console.log(isNumber(Math.random()));",
+    "packages": ["is-number"]
   }
-}'\'' | jq
-'
+}' | jq
+EOF
 ```
 
 #### 2. Remote STDIO - Direct Calls to One-Off Dyno
@@ -174,9 +174,9 @@ Content-Length: 148
 Content-Length: 66
 
 {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
-Content-Length: 205
+Content-Length: 180
 
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"code_exec_node","arguments":{"code":"import numpy as np; print(np.random.rand(50).tolist())","packages":["numpy"]}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"code_exec_node","arguments":{"code":"console.log(Array.from({length: 50}, () => Math.random()));","packages":[""]}}}
 EOF
 ```
 
