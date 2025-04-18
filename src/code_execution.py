@@ -2,7 +2,8 @@ import subprocess
 import os
 import shutil
 import tempfile
-from typing import Optional, Dict, Any, List
+from typing import Annotated, Optional, List, Dict, Any
+from pydantic import Field
 
 def run_command(cmd: List[str], cwd: Optional[str] = None) -> Dict[str, Any]:
     """Executes a command using subprocess and returns output and errors."""
@@ -45,9 +46,6 @@ def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
     Note that this does NOT mean the code is fully isolated or secure - it just means the npm installations
     are isolated.
 
-    Note that this does NOT mean the code is fully isolated or secure - it just means the package installations
-    are isolated.
-
     Args:
         code: The code to run.
         packages: Optional npm packages to install before execution.
@@ -78,27 +76,35 @@ def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
     finally:
         shutil.rmtree(temp_dir)
 
-def code_exec_node(code: str, packages: Optional[List[str]] = None, isolated_venv: bool = False) -> Dict[str, Any]:
-    """
-    Executes a Node.js code snippet with optional npm dependencies.
 
-    Args:
-        code: The Node.js code to execute as a string.
-        packages: An optional list of npm package names to install before execution.
-        isolated_venv: Whether to use a temporary directory for isolation.
-            Not needed for STDIO mode; recommended but not required for SSE mode,
-            to improve package isolation. Note that it will slow code execution down.
+def code_exec_node(
+    code: Annotated[
+        str,
+        Field(description="The Node.js code to execute as a string.")
+    ],
+    packages: Annotated[
+        Optional[List[str]],
+        Field(description="Optional list of npm package names to install before execution.")
+    ] = None,
+    use_temp_dir: Annotated[
+        bool,
+        Field(description="Use a temporary working directory for code execution and npm installs.")
+    ] = False
+) -> Dict[str, Any]:
+    """Executes a Node.js code snippet with optional npm dependencies.
+
+    The Node.js runtime has access to networking, the filesystem, and can use top-level await.
+    A non-zero exit code is an error and should be fixed.
 
     Returns:
-        A dictionary containing:
+        JSON containing:
             - 'returncode': Exit status of the execution.
             - 'stdout': Captured standard output.
             - 'stderr': Captured standard error or install failure messages.
     """
-    if isolated_venv:
+    if use_temp_dir:
         return run_in_tempdir(code, packages)
 
-    # For non-isolated mode, install globally (or assume packages are already present)
     install_result = install_dependencies(packages, install_cmd_path="npm")
     if install_result["returncode"] != 0:
         return {
