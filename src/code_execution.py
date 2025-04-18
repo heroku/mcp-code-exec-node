@@ -99,6 +99,7 @@ def code_exec_node(
     """Executes a Node.js code snippet with optional npm dependencies.
 
     The Node.js runtime has access to networking, the filesystem, and can use top-level await.
+
     A non-zero exit code is an error and should be fixed.
 
     Returns:
