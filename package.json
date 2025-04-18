@@ -4,6 +4,5 @@
     "description": "Minimal Node.js setup for Heroku runtime",
     "main": "index.js",
     "dependencies": {
-        "is-number": "^7.0.0"
     }
 }

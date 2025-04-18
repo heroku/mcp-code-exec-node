@@ -21,14 +21,18 @@ def run_command(cmd: List[str], cwd: Optional[str] = None) -> Dict[str, Any]:
             "stderr": "Error: Execution timed out"
         }
 
-
-def install_dependencies(packages: Optional[List[str]], install_cmd_path: str = "npm") -> Dict[str, Any]:
+def install_dependencies(
+    packages: Optional[List[str]],
+    install_cmd_path: str = "npm",
+    cwd: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Installs Node.js packages using the specified npm executable.
 
     Args:
         packages: A list of npm package names to install.
         install_cmd_path: Path to the npm executable to use.
+        cwd: Directory to install packages into.
 
     Returns:
         The result of the package installation command, or a no-op result if no install is needed.
@@ -36,8 +40,10 @@ def install_dependencies(packages: Optional[List[str]], install_cmd_path: str = 
     if not packages:
         return {"returncode": 0, "stdout": "", "stderr": ""}  # No installation needed
 
-    cmd = [install_cmd_path, "install"] + packages
-    return run_command(cmd)
+    # Note: --no-save means that package.json won't be updated. Some users may want this - potentially.
+    cmd = [install_cmd_path, "install", "--no-save"] + packages
+
+    return run_command(cmd, cwd=cwd)
 
 def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
     """
@@ -59,7 +65,7 @@ def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
         with open(os.path.join(temp_dir, "package.json"), "w") as f:
             f.write('{"type": "module"}')  # Enables top-level await if needed
 
-        install_result = install_dependencies(packages, install_cmd_path="npm")
+        install_result = install_dependencies(packages, install_cmd_path="npm", cwd=temp_dir)
         if install_result["returncode"] != 0:
             return {
                 "returncode": install_result["returncode"],
@@ -75,7 +81,6 @@ def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
 
     finally:
         shutil.rmtree(temp_dir)
-
 
 def code_exec_node(
     code: Annotated[
