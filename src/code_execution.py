@@ -2,7 +2,8 @@ import subprocess
 import os
 import shutil
 import tempfile
-from typing import Optional, Dict, Any, List
+from typing import Annotated, Optional, List, Dict, Any
+from pydantic import Field
 
 def run_command(cmd: List[str], cwd: Optional[str] = None) -> Dict[str, Any]:
     """Executes a command using subprocess and returns output and errors."""
@@ -20,14 +21,18 @@ def run_command(cmd: List[str], cwd: Optional[str] = None) -> Dict[str, Any]:
             "stderr": "Error: Execution timed out"
         }
 
-
-def install_dependencies(packages: Optional[List[str]], install_cmd_path: str = "npm") -> Dict[str, Any]:
+def install_dependencies(
+    packages: Optional[List[str]],
+    install_cmd_path: str = "npm",
+    cwd: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Installs Node.js packages using the specified npm executable.
 
     Args:
         packages: A list of npm package names to install.
         install_cmd_path: Path to the npm executable to use.
+        cwd: Directory to install packages into.
 
     Returns:
         The result of the package installation command, or a no-op result if no install is needed.
@@ -35,17 +40,16 @@ def install_dependencies(packages: Optional[List[str]], install_cmd_path: str = 
     if not packages:
         return {"returncode": 0, "stdout": "", "stderr": ""}  # No installation needed
 
-    cmd = [install_cmd_path, "install"] + packages
-    return run_command(cmd)
+    # Note: --no-save means that package.json won't be updated. Some users may want this - potentially.
+    cmd = [install_cmd_path, "install", "--no-save"] + packages
+
+    return run_command(cmd, cwd=cwd)
 
 def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
     """
     Runs Node.js code in a temporary directory after installing optional npm packages.
 
     Note that this does NOT mean the code is fully isolated or secure - it just means the npm installations
-    are isolated.
-
-    Note that this does NOT mean the code is fully isolated or secure - it just means the package installations
     are isolated.
 
     Args:
@@ -61,7 +65,7 @@ def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
         with open(os.path.join(temp_dir, "package.json"), "w") as f:
             f.write('{"type": "module"}')  # Enables top-level await if needed
 
-        install_result = install_dependencies(packages, install_cmd_path="npm")
+        install_result = install_dependencies(packages, install_cmd_path="npm", cwd=temp_dir)
         if install_result["returncode"] != 0:
             return {
                 "returncode": install_result["returncode"],
@@ -78,27 +82,35 @@ def run_in_tempdir(code: str, packages: Optional[List[str]]) -> Dict[str, Any]:
     finally:
         shutil.rmtree(temp_dir)
 
-def code_exec_node(code: str, packages: Optional[List[str]] = None, isolated_venv: bool = False) -> Dict[str, Any]:
-    """
-    Executes a Node.js code snippet with optional npm dependencies.
+def code_exec_node(
+    code: Annotated[
+        str,
+        Field(description="The Node.js code to execute as a string.")
+    ],
+    packages: Annotated[
+        Optional[List[str]],
+        Field(description="Optional list of npm package names to install before execution.")
+    ] = None,
+    use_temp_dir: Annotated[
+        bool,
+        Field(description="Use a temporary working directory for code execution and npm installs.")
+    ] = False
+) -> Dict[str, Any]:
+    """Executes a Node.js code snippet with optional npm dependencies.
 
-    Args:
-        code: The Node.js code to execute as a string.
-        packages: An optional list of npm package names to install before execution.
-        isolated_venv: Whether to use a temporary directory for isolation.
-            Not needed for STDIO mode; recommended but not required for SSE mode,
-            to improve package isolation. Note that it will slow code execution down.
+    The Node.js runtime has access to networking, the filesystem, and can use top-level await.
+
+    A non-zero exit code is an error and should be fixed.
 
     Returns:
-        A dictionary containing:
+        JSON containing:
             - 'returncode': Exit status of the execution.
             - 'stdout': Captured standard output.
             - 'stderr': Captured standard error or install failure messages.
     """
-    if isolated_venv:
+    if use_temp_dir:
         return run_in_tempdir(code, packages)
 
-    # For non-isolated mode, install globally (or assume packages are already present)
     install_result = install_dependencies(packages, install_cmd_path="npm")
     if install_result["returncode"] != 0:
         return {

@@ -115,8 +115,9 @@ Example tool call request:
 python example_clients/test_stdio.py mcp call_tool --args '{
   "name": "code_exec_node",
   "arguments": {
-    "code": "console.log(Array.from({length: 50}, () => Math.random()));",
-    "packages": []
+    "code": "import { evaluate, pi } from \"mathjs\";\nconst result = evaluate(\"sin(2 * pi / 3) + cos(pi / 6)\");\nconsole.log(\"Result:\", result);",
+    "packages": ["mathjs"],
+    "use_temp_dir": true
   }
 }' | jq
 ```
