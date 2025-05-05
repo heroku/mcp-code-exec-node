@@ -67,7 +67,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If you're testing SSE, in one terminal pane you'll need to run:
+If you're testing SSE, in one terminal pane you'll need to start the server:
 ```
 source venv/bin/activate
 export API_KEY=$(heroku config:get API_KEY -a $APP_NAME)
