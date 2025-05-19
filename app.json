@@ -15,6 +15,10 @@
         "STDIO_MODE_ONLY": {
             "description": "Only allow tool requests via STDIO mode?",
             "value": "false"
+        },
+        "USE_TEMP_DIR": {
+           "description": "Use a temporary working directory for code execution and npm installs.",
+            "value": "false"
         }
     },
     "formation": [
