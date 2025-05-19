@@ -4,6 +4,8 @@ import shutil
 import tempfile
 from typing import Annotated, Optional, List, Dict, Any
 from pydantic import Field
+# local:
+from src import config
 
 def run_command(cmd: List[str], cwd: Optional[str] = None) -> Dict[str, Any]:
     """Executes a command using subprocess and returns output and errors."""
@@ -91,10 +93,6 @@ def code_exec_node(
         Optional[List[str]],
         Field(description="Optional list of npm package names to install before execution.")
     ] = None,
-    use_temp_dir: Annotated[
-        bool,
-        Field(description="Use a temporary working directory for code execution and npm installs.")
-    ] = False
 ) -> Dict[str, Any]:
     """Executes a Node.js code snippet with optional npm dependencies.
 
@@ -108,7 +106,7 @@ def code_exec_node(
             - 'stdout': Captured standard output.
             - 'stderr': Captured standard error or install failure messages.
     """
-    if use_temp_dir:
+    if config.USE_TEMP_DIR:
         return run_in_tempdir(code, packages)
 
     install_result = install_dependencies(packages, install_cmd_path="npm")
