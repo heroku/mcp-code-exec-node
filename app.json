@@ -17,7 +17,7 @@
             "value": "false"
         },
         "USE_TEMP_DIR": {
-           "description": "Use a temporary working directory for code execution and npm installs.",
+           "description": "Use a temporary working directory for npm installs and code execution. Not a secure sandbox.",
             "value": "false"
         }
     },
