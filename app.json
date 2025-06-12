@@ -15,6 +15,14 @@
         "STDIO_MODE_ONLY": {
             "description": "Only allow tool requests via STDIO mode?",
             "value": "false"
+        },
+        "REMOTE_SERVER_TRANSPORT_MODULE": {
+            "description": "Tranport module name used for deployed web app (applicable when web formation size is >0). `streamable_http_server` or `sse_server`.",
+            "value": "streamable_http_server"
+        },
+        "USE_TEMP_DIR": {
+           "description": "Use a temporary working directory for npm installs and code execution. Not a secure sandbox.",
+            "value": "false"
         }
     },
     "formation": [
