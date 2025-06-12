@@ -3,6 +3,9 @@
     "version": "1.0.0",
     "description": "Minimal Node.js setup for Heroku runtime",
     "main": "index.js",
+    "engines": {
+        "node": "22.x"
+    },
     "dependencies": {
     }
 }
